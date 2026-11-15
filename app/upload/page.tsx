@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { formatBytes, uploadImage } from '@/lib/api';
 
-const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_BYTES = 5 * 1024 * 1024;
 
 export default function UploadPage() {
@@ -33,7 +33,7 @@ export default function UploadPage() {
     if (!f) return setFile(null);
     if (!ALLOWED.includes(f.type)) {
       setFile(null);
-      return setError('Format harus JPG, PNG, WEBP, atau GIF.');
+      return setError('Format harus JPG, PNG, atau WEBP.');
     }
     if (f.size > MAX_BYTES) {
       setFile(null);
@@ -89,7 +89,7 @@ export default function UploadPage() {
               Seret gambar ke sini atau klik untuk memilih
             </p>
             <p className="mt-1 text-sm text-gray-500">
-              JPG, PNG, WEBP, GIF — maks. {formatBytes(MAX_BYTES)}
+              JPG, PNG, WEBP — maks. {formatBytes(MAX_BYTES)}
             </p>
           </>
         )}

@@ -43,6 +43,9 @@ app/images/[filename]/image-detail.tsx  # client component (useParams)
 - Halaman detail memakai `useParams`, yang men-suspend saat prerender dengan
   `cacheComponents` aktif — karena itu dibungkus `Suspense` di `page.tsx`.
 - Upload memakai `XMLHttpRequest` agar progress bisa ditampilkan.
+- Gambar yang ditampilkan sudah ber-watermark dari backend; tidak ada overlay
+  tambahan di FE. Format yang diterima: JPG, PNG, WEBP (GIF tidak didukung
+  karena watermark dibakar ke file).
 
 ## Docker
 
