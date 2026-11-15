@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import ConfirmDialog from '@/components/confirm-dialog';
 import {
   absoluteUrl,
   deleteImage,
@@ -11,6 +12,7 @@ import {
   formatDate,
   type ImageDetail,
 } from '@/lib/api';
+import { invalidateGallery } from '@/lib/gallery-store';
 
 export default function ImageDetailPage() {
   const { filename } = useParams<{ filename: string }>();
@@ -19,6 +21,7 @@ export default function ImageDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!filename) return;
@@ -39,17 +42,16 @@ export default function ImageDetailPage() {
   }
 
   async function handleDelete() {
-    if (!data) return;
-    if (!window.confirm('Hapus gambar ini? Tindakan tidak bisa dibatalkan.')) {
-      return;
-    }
+    if (!data || deleting) return;
+    setConfirmOpen(false);
     setDeleting(true);
     setError(null);
     try {
       await deleteImage(data.filename);
-      router.push('/');
-      // Paksa galeri mengambil ulang daftar setelah penghapusan.
-      router.refresh();
+      // Tandai galeri tidak valid, lalu ganti entri history halaman detail agar
+      // tombol Back tidak kembali ke gambar yang sudah dihapus.
+      invalidateGallery();
+      router.replace('/');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal menghapus gambar');
       setDeleting(false);
@@ -121,7 +123,7 @@ export default function ImageDetailPage() {
             </div>
 
             <button
-              onClick={() => void handleDelete()}
+              onClick={() => setConfirmOpen(true)}
               disabled={deleting}
               className="w-full rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -130,6 +132,15 @@ export default function ImageDetailPage() {
           </aside>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Hapus gambar ini?"
+        description="Gambar dan file aslinya akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."
+        busy={deleting}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => void handleDelete()}
+      />
     </main>
   );
 }

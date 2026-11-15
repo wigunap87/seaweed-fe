@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { formatBytes, uploadImage } from '@/lib/api';
+import { invalidateGallery } from '@/lib/gallery-store';
 
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -49,6 +50,8 @@ export default function UploadPage() {
     setError(null);
     try {
       const res = await uploadImage(file, setProgress);
+      // Galeri perlu fetch ulang agar gambar baru langsung terlihat.
+      invalidateGallery();
       router.push(`/images/${res.filename}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload gagal');

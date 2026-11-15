@@ -30,6 +30,8 @@ npm run dev                  # http://localhost:3000
 
 ```
 lib/api.ts                       # tipe + fetch/upload (XHR untuk progress)
+lib/gallery-store.ts             # penanda invalidasi daftar galeri
+components/confirm-dialog.tsx    # modal konfirmasi (native <dialog>)
 app/page.tsx                     # galeri
 app/upload/page.tsx              # upload
 app/images/[filename]/page.tsx   # server wrapper + Suspense
@@ -46,6 +48,13 @@ app/images/[filename]/image-detail.tsx  # client component (useParams)
 - Hapus gambar tersedia di halaman detail dan di tiap kartu galeri (tombol kecil
   di pojok kanan atas); memanggil `DELETE /api/images/:filename` dan menghapus
   versi publik sekaligus original di backend.
+- Konfirmasi hapus memakai modal `ConfirmDialog` (elemen native `<dialog>`),
+  bukan `window.confirm`: tombol Batal, Esc, atau klik backdrop menutup modal.
+- Setelah upload/hapus, `lib/gallery-store.ts` ditandai tidak valid
+  (`invalidateGallery()`). Galeri berlangganan lewat `useSyncExternalStore` dan
+  otomatis mengambil halaman pertama lagi, jadi daftar tetap segar tanpa reload
+  penuh. Halaman detail memakai `router.replace('/')` setelah hapus supaya
+  tombol Back tidak kembali ke gambar yang sudah dihapus.
 - Gambar yang ditampilkan sudah ber-watermark dari backend; tidak ada overlay
   tambahan di FE. Format yang diterima: JPG, PNG, WEBP (GIF tidak didukung
   karena watermark dibakar ke file).

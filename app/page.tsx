@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import ConfirmDialog from '@/components/confirm-dialog';
 import {
   absoluteUrl,
   deleteImage,
@@ -9,6 +10,11 @@ import {
   formatBytes,
   type ImageItem,
 } from '@/lib/api';
+import {
+  getGalleryVersion,
+  invalidateGallery,
+  subscribeGallery,
+} from '@/lib/gallery-store';
 
 export default function GalleryPage() {
   const [items, setItems] = useState<ImageItem[]>([]);
@@ -17,13 +23,23 @@ export default function GalleryPage() {
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [pending, setPending] = useState<ImageItem | null>(null);
+  // Naik setiap ada upload/hapus dari halaman lain, sehingga galeri fetch ulang
+  // tanpa perlu reload penuh.
+  const version = useSyncExternalStore(
+    subscribeGallery,
+    getGalleryVersion,
+    () => 0,
+  );
 
-  const load = useCallback(async (next: string | null) => {
+  const load = useCallback(async (next: string | null, reset = false) => {
     setLoading(true);
     setError(null);
+    if (reset) setItems([]);
     try {
       const res = await fetchImages(next);
       setItems((prev) => {
+        if (reset) return res.items;
         // dedupe agar aman terhadap double-effect di React StrictMode
         const seen = new Set(prev.map((i) => i.filename));
         return [...prev, ...res.items.filter((i) => !seen.has(i.filename))];
@@ -38,16 +54,24 @@ export default function GalleryPage() {
   }, []);
 
   useEffect(() => {
-    // Fetch halaman pertama saat mount. Galeri ini client-only (data diambil
-    // dari BE), jadi setState di effect memang diperlukan di sini.
+    // Fetch halaman pertama setiap kali komponen mount atau daftar ditandai
+    // tidak valid (habis upload/hapus di halaman lain). Galeri ini client-only
+    // (data diambil dari BE), jadi setState di effect memang diperlukan.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load(null);
-  }, [load]);
+    void load(null, true);
+  }, [load, version]);
+
+  useEffect(() => {
+    // Browser bisa memulihkan halaman dari bfcache (tombol Back) dengan state
+    // React lama; anggap daftar tidak valid agar diambil ulang.
+    function onPageShow(e: PageTransitionEvent) {
+      if (e.persisted) invalidateGallery();
+    }
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, []);
 
   async function remove(img: ImageItem) {
-    if (!window.confirm(`Hapus "${img.filename}"? Tindakan tidak bisa dibatalkan.`)) {
-      return;
-    }
     setDeleting(img.filename);
     setError(null);
     try {
@@ -57,6 +81,7 @@ export default function GalleryPage() {
       setError(e instanceof Error ? e.message : 'Gagal menghapus gambar');
     } finally {
       setDeleting(null);
+      setPending(null);
     }
   }
 
@@ -106,7 +131,7 @@ export default function GalleryPage() {
             </Link>
             <button
               type="button"
-              onClick={() => void remove(img)}
+              onClick={() => setPending(img)}
               disabled={deleting === img.filename}
               aria-label={`Hapus ${img.filename}`}
               className="absolute right-2 top-2 rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-red-600 shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
@@ -128,6 +153,21 @@ export default function GalleryPage() {
           </button>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pending !== null}
+        title="Hapus gambar?"
+        description={
+          pending
+            ? `"${pending.filename}" akan dihapus permanen, termasuk file aslinya.`
+            : undefined
+        }
+        busy={deleting !== null}
+        onCancel={() => setPending(null)}
+        onConfirm={() => {
+          if (pending) void remove(pending);
+        }}
+      />
     </main>
   );
 }
