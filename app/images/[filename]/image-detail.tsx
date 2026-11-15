@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   absoluteUrl,
+  deleteImage,
   fetchImageDetail,
   formatBytes,
   formatDate,
@@ -13,9 +14,11 @@ import {
 
 export default function ImageDetailPage() {
   const { filename } = useParams<{ filename: string }>();
+  const router = useRouter();
   const [data, setData] = useState<ImageDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!filename) return;
@@ -32,6 +35,24 @@ export default function ImageDetailPage() {
       setTimeout(() => setCopied(false), 1500);
     } catch {
       setError('Browser tidak mengizinkan akses clipboard. Salin URL manual.');
+    }
+  }
+
+  async function handleDelete() {
+    if (!data) return;
+    if (!window.confirm('Hapus gambar ini? Tindakan tidak bisa dibatalkan.')) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      await deleteImage(data.filename);
+      router.push('/');
+      // Paksa galeri mengambil ulang daftar setelah penghapusan.
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal menghapus gambar');
+      setDeleting(false);
     }
   }
 
@@ -98,6 +119,14 @@ export default function ImageDetailPage() {
                 {copied ? 'Tersalin ✓' : 'Salin link'}
               </button>
             </div>
+
+            <button
+              onClick={() => void handleDelete()}
+              disabled={deleting}
+              className="w-full rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {deleting ? 'Menghapus...' : 'Hapus gambar'}
+            </button>
           </aside>
         </div>
       )}

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import {
   absoluteUrl,
+  deleteImage,
   fetchImages,
   formatBytes,
   type ImageItem,
@@ -15,6 +16,7 @@ export default function GalleryPage() {
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = useCallback(async (next: string | null) => {
     setLoading(true);
@@ -42,6 +44,22 @@ export default function GalleryPage() {
     void load(null);
   }, [load]);
 
+  async function remove(img: ImageItem) {
+    if (!window.confirm(`Hapus "${img.filename}"? Tindakan tidak bisa dibatalkan.`)) {
+      return;
+    }
+    setDeleting(img.filename);
+    setError(null);
+    try {
+      await deleteImage(img.filename);
+      setItems((prev) => prev.filter((i) => i.filename !== img.filename));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal menghapus gambar');
+    } finally {
+      setDeleting(null);
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 p-6">
       <header className="mb-6 flex items-center justify-between">
@@ -68,10 +86,10 @@ export default function GalleryPage() {
 
       <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((img) => (
-          <li key={img.filename}>
+          <li key={img.filename} className="group relative">
             <Link
               href={`/images/${img.filename}`}
-              className="group block overflow-hidden rounded-xl border bg-white shadow-sm transition hover:shadow-md"
+              className="block overflow-hidden rounded-xl border bg-white shadow-sm transition hover:shadow-md"
             >
               <div className="aspect-square overflow-hidden bg-gray-100">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -86,6 +104,15 @@ export default function GalleryPage() {
                 {formatBytes(img.size)}
               </div>
             </Link>
+            <button
+              type="button"
+              onClick={() => void remove(img)}
+              disabled={deleting === img.filename}
+              aria-label={`Hapus ${img.filename}`}
+              className="absolute right-2 top-2 rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-red-600 shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+            >
+              {deleting === img.filename ? '...' : 'Hapus'}
+            </button>
           </li>
         ))}
       </ul>

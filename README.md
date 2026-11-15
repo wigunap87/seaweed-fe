@@ -24,7 +24,7 @@ npm run dev                  # http://localhost:3000
 |---|---|
 | `/` | Galeri (grid, lazy load, cursor pagination) |
 | `/upload` | Form upload: drag & drop, preview, progress bar, validasi tipe/ukuran |
-| `/images/[filename]` | Detail: preview, metadata, buka asli, salin link |
+| `/images/[filename]` | Detail: preview, metadata, buka asli, salin link, hapus |
 
 ## Struktur
 
@@ -43,6 +43,9 @@ app/images/[filename]/image-detail.tsx  # client component (useParams)
 - Halaman detail memakai `useParams`, yang men-suspend saat prerender dengan
   `cacheComponents` aktif — karena itu dibungkus `Suspense` di `page.tsx`.
 - Upload memakai `XMLHttpRequest` agar progress bisa ditampilkan.
+- Hapus gambar tersedia di halaman detail dan di tiap kartu galeri (tombol kecil
+  di pojok kanan atas); memanggil `DELETE /api/images/:filename` dan menghapus
+  versi publik sekaligus original di backend.
 - Gambar yang ditampilkan sudah ber-watermark dari backend; tidak ada overlay
   tambahan di FE. Format yang diterima: JPG, PNG, WEBP (GIF tidak didukung
   karena watermark dibakar ke file).

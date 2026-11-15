@@ -1,5 +1,7 @@
 export const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+  // `??` tidak menangkap string kosong: build arg yang kosong akan membuat
+  // semua request jatuh ke path relatif tanpa peringatan.
+  process.env.NEXT_PUBLIC_API_URL?.trim() || 'http://localhost:4000'
 ).replace(/\/$/, '');
 
 export interface ImageItem {
@@ -68,6 +70,14 @@ export async function fetchImageDetail(filename: string): Promise<ImageDetail> {
 
 interface ApiErrorBody {
   message?: string | string[];
+}
+
+export async function deleteImage(filename: string): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/api/images/${encodeURIComponent(filename)}`,
+    { method: 'DELETE' },
+  );
+  if (!res.ok) throw new Error(await errorMessage(res));
 }
 
 // XHR dipakai agar progress upload bisa ditampilkan (fetch belum mendukung
